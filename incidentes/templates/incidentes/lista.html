@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Mapa de incidentes{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+    #mapa { height: 480px; width: 100%; border-radius: 3px; border: 1px solid var(--line); }
+    .layout-mapa { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+    @media (max-width: 900px) { .layout-mapa { grid-template-columns: 1fr; } }
+    .panel-filtros { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.5rem; }
+    .panel-filtros > div { flex: 1; min-width: 160px; }
+    .lista-incidentes { display: flex; flex-direction: column; gap: 0.7rem; max-height: 480px; overflow-y: auto; }
+    .item-incidente { display: flex; gap: 0.8rem; background: var(--panel-raised); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+    .item-incidente-cuerpo { padding: 0.7rem 0.9rem; flex: 1; }
+    .item-incidente h4 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+    .item-incidente a { color: var(--text); }
+    .item-incidente a:hover { color: var(--acento); text-decoration: none; }
+    .item-meta { font-size: 0.78rem; color: var(--text-dim); display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.3rem; }
+    .leaflet-popup-content-wrapper { background: var(--panel-raised); color: var(--text); border-radius: 2px; }
+    .leaflet-popup-tip { background: var(--panel-raised); }
+    .popup-incidente h4 { margin: 0 0 0.3rem; font-size: 0.9rem; }
+    .popup-incidente a { color: var(--acento); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contenedor">
+    <h1 style="margin-top:1.5rem;">Blog de seguridad vecinal</h1>
+    <p style="color:var(--text-dim); max-width:640px;">Entradas publicadas por vecinos del barrio. Cada reporte es una entrada del blog geolocalizada: hacé click en un marcador o en la lista para leer el detalle completo.</p>
+
+    <form method="get" class="panel panel-filtros">
+        <div>
+            {{ form_busqueda.titulo.label_tag }}
+            {{ form_busqueda.titulo }}
+        </div>
+        <div>
+            {{ form_busqueda.categoria.label_tag }}
+            {{ form_busqueda.categoria }}
+        </div>
+        <div>
+            {{ form_busqueda.severidad.label_tag }}
+            {{ form_busqueda.severidad }}
+        </div>
+        <div style="flex:0;">
+            <button class="btn btn-solido" type="submit">Filtrar</button>
+            <a class="btn btn-fantasma" href="{% url 'incidentes:lista' %}">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="layout-mapa">
+        <div id="mapa"></div>
+
+        <div class="lista-incidentes">
+            {% for incidente in incidentes %}
+            <div class="item-incidente">
+                <div class="barra-severidad {{ incidente.severidad }}"></div>
+                <div class="item-incidente-cuerpo">
+                    <h4><a href="{{ incidente.get_absolute_url }}">{{ incidente.titulo }}</a></h4>
+                    <div class="item-meta">
+                        <span>{{ incidente.get_categoria_display }}</span>
+                        <span class="mono severidad-{{ incidente.severidad }}">{{ incidente.get_severidad_display }}</span>
+                        <span class="mono">{{ incidente.fecha_ocurrencia|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="item-meta">{{ incidente.direccion }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <p style="color:var(--text-dim);">No hay incidentes que coincidan con los filtros aplicados.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <p class="mono" style="color:var(--text-dim);">
+        {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">&larr; anterior</a>{% endif %}
+        &nbsp;página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}&nbsp;
+        {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">siguiente &rarr;</a>{% endif %}
+    </p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    const datosIncidentes = {{ incidentes_json|safe }};
+
+    const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
+
+    const centroDefault = [-34.6037, -58.3816];
+    const mapa = L.map('mapa').setView(centroDefault, 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+    }).addTo(mapa);
+
+    const marcadores = [];
+
+    datosIncidentes.forEach(function (incidente) {
+        const marcador = L.circleMarker([incidente.lat, incidente.lng], {
+            radius: 8,
+            color: coloresSeveridad[incidente.severidad] || "#d9a53d",
+            fillColor: coloresSeveridad[incidente.severidad] || "#d9a53d",
+            fillOpacity: 0.85,
+            weight: 2,
+        }).addTo(mapa);
+
+        marcador.bindPopup(
+            '<div class="popup-incidente"><h4>' + incidente.titulo + '</h4>' +
+            '<div>' + incidente.categoria + ' · ' + incidente.direccion + '</div>' +
+            '<a href="' + incidente.url + '">Ver detalle &rarr;</a></div>'
+        );
+
+        marcadores.push(marcador);
+    });
+
+    if (marcadores.length > 0) {
+        const grupo = L.featureGroup(marcadores);
+        mapa.fitBounds(grupo.getBounds(), { padding: [30, 30], maxZoom: 15 });
+    }
+</script>
+{% endblock %}

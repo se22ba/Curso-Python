@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión{% endblock %}
+{% block content %}
+<div class="contenedor" style="max-width:420px;">
+    <h1 style="margin-top:1.5rem;">Iniciar sesión</h1>
+    {% if form.errors %}
+    <div class="alerta-error">Usuario o contraseña incorrectos.</div>
+    {% endif %}
+    <form method="post" class="panel">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-solido" type="submit">Ingresar</button>
+    </form>
+    <p style="color:var(--text-dim);">¿No tenés cuenta? <a href="{% url 'usuarios:registro' %}">Registrate</a>.</p>
+</div>
+{% endblock %}

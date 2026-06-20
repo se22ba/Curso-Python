@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Perfil de {{ perfil.usuario.username }}{% endblock %}
+{% block content %}
+<div class="contenedor" style="max-width:560px;">
+    <h1 style="margin-top:1.5rem;">{{ perfil.usuario.username }}</h1>
+
+    <div class="panel">
+        {% if perfil.avatar %}
+        <img src="{{ perfil.avatar.url }}" alt="Avatar de {{ perfil.usuario.username }}" style="width:96px; height:96px; border-radius:3px; object-fit:cover; margin-bottom:1rem;">
+        {% endif %}
+
+        {% if perfil.barrio %}
+        <p class="mono" style="color:var(--text-dim);">{{ perfil.barrio }}</p>
+        {% endif %}
+
+        {% if perfil.biografia %}
+        <p>{{ perfil.biografia|linebreaks }}</p>
+        {% else %}
+        <p style="color:var(--text-dim);">Este usuario todavía no completó su biografía.</p>
+        {% endif %}
+
+        {% if user == perfil.usuario %}
+        <a class="btn" href="{% url 'usuarios:editar_perfil' %}">Editar mi perfil</a>
+        {% endif %}
+    </div>
+
+    <h3 style="margin-top:2rem;">Entradas publicadas</h3>
+    {% if perfil.usuario.incidentes.all %}
+    <ul style="padding-left:1.1rem;">
+        {% for incidente in perfil.usuario.incidentes.all %}
+        <li><a href="{{ incidente.get_absolute_url }}">{{ incidente.titulo }}</a> <span class="mono" style="color:var(--text-dim);">— {{ incidente.fecha_ocurrencia|date:"d/m/Y" }}</span></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p style="color:var(--text-dim);">Todavía no reportó ningún incidente.</p>
+    {% endif %}
+</div>
+{% endblock %}

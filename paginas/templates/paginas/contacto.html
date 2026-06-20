@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Contacto{% endblock %}
+{% block content %}
+<div class="contenedor" style="max-width:480px;">
+    <h1 style="margin-top:1.5rem;">Contacto</h1>
+    <p style="color:var(--text-dim);">¿Encontraste un error, querés reportar un uso indebido de la plataforma o tenés una sugerencia? Escribinos.</p>
+    <form method="post" class="panel">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-solido" type="submit">Enviar mensaje</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Mapa Vecinal{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="topbar">
+        <a href="{% url 'incidentes:lista' %}" class="topbar-marca">
+            <span class="punto"></span>
+            Mapa Vecinal
+        </a>
+        <nav class="topbar-nav">
+            <a href="{% url 'incidentes:lista' %}">Mapa</a>
+            <a href="{% url 'paginas:acerca_de' %}">Acerca de</a>
+            <a href="{% url 'paginas:contacto' %}">Contacto</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'incidentes:crear' %}" class="btn btn-solido">Nueva entrada</a>
+                <a href="{% url 'usuarios:perfil' user.username %}">{{ user.username }}</a>
+                <form action="{% url 'usuarios:logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-fantasma" style="font-family:inherit;">Salir</button>
+                </form>
+            {% else %}
+                <a href="{% url 'usuarios:login' %}">Iniciar sesión</a>
+                <a href="{% url 'usuarios:registro' %}" class="btn">Crear cuenta</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main>
+        {% if messages %}
+        <div class="contenedor" style="margin-top:1.2rem;">
+            {% for message in messages %}
+                <div class="{% if message.tags == 'error' %}alerta-error{% else %}alerta-exito{% endif %}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        Mapa Vecinal — Blog comunitario de seguridad vecinal. Las entradas publicadas son cargadas por la comunidad y no constituyen una fuente oficial de estadísticas delictivas.
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

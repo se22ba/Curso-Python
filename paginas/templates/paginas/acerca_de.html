@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Acerca de{% endblock %}
+{% block content %}
+<div class="contenedor" style="max-width:680px;">
+    <h1 style="margin-top:1.5rem;">Acerca de Mapa Vecinal</h1>
+    <p>Mapa Vecinal es un blog comunitario de seguridad vecinal. Cada entrada del blog es un reporte de un incidente —robo, hurto, vandalismo o actividad sospechosa— cargado por un usuario registrado, con título, descripción, categoría y fecha del hecho, igual que cualquier publicación de blog tradicional.</p>
+    <p>Lo que diferencia a este blog de uno convencional es que cada entrada incluye además su ubicación geográfica exacta, visualizada en un mapa interactivo. Esto permite leer las publicaciones como un feed cronológico o explorarlas espacialmente, identificando zonas con mayor concentración de reportes.</p>
+    <p>Este proyecto fue desarrollado como trabajo final de un curso de Django, con fines exclusivamente académicos. El contenido publicado es generado por los propios usuarios registrados y no proviene de fuentes policiales oficiales ni constituye una estadística certificada.</p>
+    <h3>¿Cómo funciona el blog?</h3>
+    <ul>
+        <li>Cualquier visitante puede leer las entradas del blog y explorar el mapa sin necesidad de registrarse.</li>
+        <li>Para publicar una entrada nueva (un reporte) es necesario crear una cuenta e iniciar sesión.</li>
+        <li>Cada usuario puede editar o eliminar únicamente las entradas que él mismo publicó.</li>
+        <li>Cada usuario cuenta con un perfil público editable, donde se listan todas sus publicaciones.</li>
+    </ul>
+</div>
+{% endblock %}

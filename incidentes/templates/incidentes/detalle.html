@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ incidente.titulo }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+    #mapa-detalle { height: 320px; width: 100%; border-radius: 3px; border: 1px solid var(--line); margin: 1rem 0; }
+    .ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .ficha dt { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
+    .ficha dd { margin: 0.15rem 0 0; font-family: 'JetBrains Mono', monospace; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contenedor" style="max-width:720px;">
+    <div style="display:flex; align-items:center; gap:0.8rem; margin-top:1.5rem;">
+        <span class="barra-severidad {{ incidente.severidad }}" style="width:6px; height:28px; display:inline-block;"></span>
+        <h1 style="margin:0;">{{ incidente.titulo }}</h1>
+    </div>
+
+    <dl class="ficha">
+        <div>
+            <dt>Categoría</dt>
+            <dd>{{ incidente.get_categoria_display }}</dd>
+        </div>
+        <div>
+            <dt>Severidad</dt>
+            <dd class="severidad-{{ incidente.severidad }}">{{ incidente.get_severidad_display }}</dd>
+        </div>
+        <div>
+            <dt>Fecha del hecho</dt>
+            <dd>{{ incidente.fecha_ocurrencia|date:"d/m/Y H:i" }}</dd>
+        </div>
+        <div>
+            <dt>Reportado por</dt>
+            <dd>{{ incidente.autor.username }}</dd>
+        </div>
+    </dl>
+
+    <p>{{ incidente.descripcion|linebreaks }}</p>
+
+    <p style="color:var(--text-dim);">{{ incidente.direccion }}</p>
+    <div id="mapa-detalle"></div>
+
+    {% if user == incidente.autor %}
+    <div style="margin-top:1rem;">
+        <a class="btn" href="{% url 'incidentes:editar' incidente.pk %}">Editar</a>
+        <a class="btn btn-peligro" href="{% url 'incidentes:eliminar' incidente.pk %}">Eliminar</a>
+    </div>
+    {% endif %}
+
+    <p style="margin-top:1.5rem;"><a href="{% url 'incidentes:lista' %}">&larr; Volver al mapa</a></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    const lat = {{ incidente.latitud }};
+    const lng = {{ incidente.longitud }};
+    const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
+
+    const mapaDetalle = L.map('mapa-detalle').setView([lat, lng], 16);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+    }).addTo(mapaDetalle);
+
+    L.circleMarker([lat, lng], {
+        radius: 9,
+        color: coloresSeveridad["{{ incidente.severidad }}"] || "#d9a53d",
+        fillColor: coloresSeveridad["{{ incidente.severidad }}"] || "#d9a53d",
+        fillOpacity: 0.85,
+        weight: 2,
+    }).addTo(mapaDetalle);
+</script>
+{% endblock %}
