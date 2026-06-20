@@ -23,6 +23,14 @@ en un mapa interactivo. Proyecto final del curso de Django.
   publicación de entradas, todos con validación de datos.
 - **Mapa interactivo**: cada entrada del blog se geolocaliza con
   Leaflet + OpenStreetMap (sin costo, sin API key).
+- **Administración de usuarios extendida**: el panel admin muestra,
+  para cada usuario, su fecha de alta y cuántas entradas publicó, y
+  permite editar su perfil (biografía, barrio, avatar) desde la misma
+  pantalla.
+- **Protección contra spam**: límite de publicaciones por usuario
+  (cooldown entre entradas + tope diario) y sistema de reportes
+  comunitarios que oculta automáticamente una entrada tras varios
+  reportes de usuarios distintos.
 
 ## Estructura
 
@@ -30,9 +38,9 @@ en un mapa interactivo. Proyecto final del curso de Django.
 mapa_delito/
 ├── config/                  # settings, urls, wsgi
 ├── incidentes/               # entradas del blog (CRUD + mapa + búsqueda)
-│   ├── models.py
+│   ├── models.py               # Incidente + ReporteIncidente
 │   ├── forms.py
-│   ├── views.py
+│   ├── views.py                # incluye rate limiting y reportar_incidente
 │   ├── admin.py
 │   ├── tests.py
 │   ├── management/commands/cargar_datos_ejemplo.py
@@ -41,7 +49,9 @@ mapa_delito/
 │   ├── models.py              # Perfil + signal de creación automática
 │   ├── forms.py
 │   ├── views.py
+│   ├── admin.py                # UserAdmin extendido con inline de Perfil
 │   ├── tests.py
+│   ├── management/commands/crear_superusuario_inicial.py
 │   └── templates/usuarios/
 ├── paginas/                  # Acerca de + Contacto
 │   ├── models.py               # MensajeContacto
@@ -172,6 +182,32 @@ OpenStreetMap, cargados vía CDN (sin necesidad de API key ni costo):
   se completan automáticamente y son de solo lectura.
 - En el detalle, se muestra un mapa centrado en la ubicación exacta
   del incidente.
+- Los tres mapas (listado, formulario, detalle) cargan Leaflet sin el
+  atributo `integrity` (verificación criptográfica de subrecurso): un
+  hash desactualizado respecto a lo que sirve el CDN bloquea la carga
+  del script de forma silenciosa, dejando el mapa vacío sin ningún
+  error visible. Si la librería no llega a cargar por cualquier otro
+  motivo de red, se muestra un mensaje explícito en el recuadro del
+  mapa en lugar de un espacio vacío sin explicación.
+
+## Moderación y protección contra spam
+
+- **Límite de publicaciones (rate limiting)**: un usuario no puede
+  publicar más de una entrada cada 5 minutos, ni más de 5 entradas
+  por día. Si excede alguno de los dos límites, el formulario muestra
+  un mensaje claro indicando cuándo puede volver a intentarlo.
+- **Reportes comunitarios**: cualquier usuario logueado (que no sea
+  el autor) puede reportar una entrada desde su página de detalle.
+  Tras 3 reportes de usuarios distintos, la entrada se oculta
+  automáticamente del mapa y del listado público, pero el autor y el
+  staff siguen pudiendo verla (para que el autor sepa qué pasó, y el
+  staff pueda revisarla desde `/admin/`). Un mismo usuario no puede
+  reportar la misma entrada dos veces.
+- **Revisión desde el admin**: `IncidenteAdmin` muestra el estado
+  "oculto por reportes" en el listado y permite revertirlo
+  manualmente (por si los reportes fueron maliciosos o erróneos), y
+  cada entrada incluye en línea el detalle de quién la reportó y
+  cuándo.
 
 ## Seguridad
 
@@ -180,11 +216,13 @@ OpenStreetMap, cargados vía CDN (sin necesidad de API key ni costo):
 - Contraseñas validadas con los validadores estándar de Django
   (longitud mínima, similitud con datos del usuario, contraseñas
   comunes, no completamente numéricas).
-- CSRF habilitado en todos los formularios POST (incluyendo logout,
-  que requiere POST en lugar de un link GET).
+- CSRF habilitado en todos los formularios POST (incluyendo logout y
+  reportar una entrada, que requieren POST en lugar de un link GET).
 - Solo el autor de una entrada puede editarla o eliminarla
   (`UserPassesTestMixin` personalizado), devolviendo `403` si otro
   usuario lo intenta.
+- Una entrada oculta por reportes devuelve `404` a cualquier visitante
+  que no sea el autor o staff, incluso si tiene el link directo.
 - En producción (`DEBUG=False`) se activan automáticamente:
   redirección forzada a HTTPS, cookies de sesión y CSRF marcadas como
   seguras, HSTS, protección contra MIME-sniffing y `X-Frame-Options: DENY`.
@@ -196,7 +234,7 @@ pip install -r requirements-dev.txt
 python manage.py test
 ```
 
-56 tests cubriendo las tres apps con **100% de cobertura de líneas**
+78 tests cubriendo las tres apps con **100% de cobertura de líneas**
 (medido con `coverage`, no estimado):
 
 ```bash
@@ -217,6 +255,16 @@ Cubren, entre otros casos:
   requiere `POST`).
 - El comando `cargar_datos_ejemplo`, incluyendo que correrlo dos veces
   no duplica datos.
+- Rate limiting: cooldown entre publicaciones, tope diario, y que una
+  publicación pasado el cooldown se permite con normalidad.
+- Sistema de reportes: que el autor no pueda reportar su propia
+  entrada, que un usuario no pueda reportar dos veces, ocultamiento
+  automático al alcanzar el umbral de reportes, y que una entrada
+  oculta devuelva 404 a terceros pero siga visible para el autor y
+  para staff.
+- Admin de usuarios: que el listado muestre la cantidad de entradas
+  publicadas, y que la edición de un usuario incluya el inline de
+  `Perfil`.
 
 ## Despliegue en Render (URL pública)
 
@@ -356,6 +404,29 @@ Si preferís configurar el servicio a mano en lugar de usar
   y crea el usuario en cada deploy si todavía no existe. Esto además
   hace que el proyecto se recupere solo si la base gratuita de
   Postgres llegara a reiniciarse, sin pasos manuales adicionales.
+- **Rate limiting en la vista, no en el formulario**: `IncidenteForm`
+  se reutiliza tanto para crear como para editar. Si el límite de
+  publicaciones se validara en el `clean()` del form, también se
+  aplicaría al editar una entrada existente, lo cual no tiene
+  sentido. Por eso la validación vive en `IncidenteCreateView.form_valid()`,
+  que es donde corresponde semánticamente.
+- **Ocultamiento automático en lugar de borrado** ante reportes
+  comunitarios: el campo `oculto_por_reportes` retira la entrada de
+  la vista pública sin destruir el dato, permitiendo que un admin
+  revierta la decisión si los reportes fueron maliciosos o erróneos.
+  El autor y el staff siguen viendo la entrada oculta; un visitante
+  con el link directo recibe `404`, no un mensaje que confirme la
+  existencia del contenido oculto.
+- **`unique_together` en `ReporteIncidente`** en lugar de validar la
+  duplicación a mano: la base de datos garantiza que un usuario no
+  pueda reportar la misma entrada dos veces, sin necesidad de una
+  consulta adicional antes de cada insert.
+- **Sin `integrity` en los `<script>`/`<link>` de Leaflet**: un hash
+  de Subresource Integrity desactualizado respecto a lo que sirve el
+  CDN bloquea la carga del recurso sin ningún error visible en la
+  página — el mapa queda vacío sin pista de qué falló. Para una
+  librería pública y estable como Leaflet, el riesgo que mitiga ese
+  hash es mucho menor que el costo de que se rompa silenciosamente.
 
 ## Reproducir en otra máquina
 

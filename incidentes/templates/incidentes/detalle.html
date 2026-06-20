@@ -2,12 +2,16 @@
 {% block title %}{{ incidente.titulo }}{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
     #mapa-detalle { height: 320px; width: 100%; border-radius: 3px; border: 1px solid var(--line); margin: 1rem 0; }
     .ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1rem 0; }
     .ficha dt { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
     .ficha dd { margin: 0.15rem 0 0; font-family: 'JetBrains Mono', monospace; }
+
+    @media (max-width: 768px) {
+        #mapa-detalle { height: 240px; }
+    }
 </style>
 {% endblock %}
 
@@ -47,6 +51,17 @@
         <a class="btn" href="{% url 'incidentes:editar' incidente.pk %}">Editar</a>
         <a class="btn btn-peligro" href="{% url 'incidentes:eliminar' incidente.pk %}">Eliminar</a>
     </div>
+    {% elif puede_reportar %}
+    <div style="margin-top:1rem;">
+        {% if ya_reportado %}
+        <span style="color:var(--text-dim); font-size:0.85rem;">Ya reportaste esta entrada. Gracias por ayudar a mantener la calidad del contenido.</span>
+        {% else %}
+        <form action="{% url 'incidentes:reportar' incidente.pk %}" method="post">
+            {% csrf_token %}
+            <button class="btn btn-fantasma" type="submit">Reportar esta entrada</button>
+        </form>
+        {% endif %}
+    </div>
     {% endif %}
 
     <p style="margin-top:1.5rem;"><a href="{% url 'incidentes:lista' %}">&larr; Volver al mapa</a></p>
@@ -54,25 +69,30 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const lat = {{ incidente.latitud }};
-    const lng = {{ incidente.longitud }};
-    const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
+    if (typeof L === "undefined") {
+        document.getElementById("mapa-detalle").innerHTML =
+            '<p style="color:var(--text-dim); padding:1rem; text-align:center;">No se pudo cargar el mapa. Verificá tu conexión a internet.</p>';
+    } else {
+        const lat = {{ incidente.latitud }};
+        const lng = {{ incidente.longitud }};
+        const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
 
-    const mapaDetalle = L.map('mapa-detalle').setView([lat, lng], 16);
+        const mapaDetalle = L.map('mapa-detalle').setView([lat, lng], 16);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
-    }).addTo(mapaDetalle);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19,
+        }).addTo(mapaDetalle);
 
-    L.circleMarker([lat, lng], {
-        radius: 9,
-        color: coloresSeveridad["{{ incidente.severidad }}"] || "#d9a53d",
-        fillColor: coloresSeveridad["{{ incidente.severidad }}"] || "#d9a53d",
-        fillOpacity: 0.85,
-        weight: 2,
-    }).addTo(mapaDetalle);
+        L.circleMarker([lat, lng], {
+            radius: 9,
+            color: coloresSeveridad["{{ incidente.severidad }}"] || "#d9a53d",
+            fillColor: coloresSeveridad["{{ incidente.severidad }}"] || "#d9a53d",
+            fillOpacity: 0.85,
+            weight: 2,
+        }).addTo(mapaDetalle);
+    }
 </script>
 {% endblock %}

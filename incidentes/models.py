@@ -2,6 +2,8 @@ from django.conf import settings
 from django.db import models
 from django.urls import reverse
 
+UMBRAL_REPORTES_PARA_OCULTAR = 3
+
 
 class Incidente(models.Model):
     CATEGORIA_ROBO = "robo"
@@ -39,6 +41,7 @@ class Incidente(models.Model):
     autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="incidentes")
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
+    oculto_por_reportes = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-fecha_ocurrencia"]
@@ -50,3 +53,22 @@ class Incidente(models.Model):
 
     def get_absolute_url(self):
         return reverse("incidentes:detalle", kwargs={"pk": self.pk})
+
+    def cantidad_reportes(self):
+        return self.reportes.count()
+
+
+class ReporteIncidente(models.Model):
+    incidente = models.ForeignKey(Incidente, on_delete=models.CASCADE, related_name="reportes")
+    reportado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reportes_realizados")
+    motivo = models.CharField(max_length=200, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-creado_en"]
+        unique_together = ("incidente", "reportado_por")
+        verbose_name = "Reporte de entrada"
+        verbose_name_plural = "Reportes de entradas"
+
+    def __str__(self):
+        return f"Reporte de {self.reportado_por.username} sobre {self.incidente.titulo}"

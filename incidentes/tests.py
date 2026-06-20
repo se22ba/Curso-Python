@@ -7,11 +7,12 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Incidente
+from .models import Incidente, ReporteIncidente, UMBRAL_REPORTES_PARA_OCULTAR
 from .forms import IncidenteForm, IncidenteBusquedaForm
 
 
 def crear_incidente(autor, **overrides):
+    creado_en_forzado = overrides.pop("creado_en", None)
     datos = {
         "titulo": "Incidente de prueba",
         "descripcion": "Descripción de prueba con suficiente longitud.",
@@ -24,7 +25,13 @@ def crear_incidente(autor, **overrides):
         "autor": autor,
     }
     datos.update(overrides)
-    return Incidente.objects.create(**datos)
+    incidente = Incidente.objects.create(**datos)
+
+    if creado_en_forzado is not None:
+        incidente.creado_en = creado_en_forzado
+        incidente.save(update_fields=["creado_en"])
+
+    return incidente
 
 
 class IncidenteModelTest(TestCase):
@@ -233,3 +240,155 @@ class CargarDatosEjemploCommandTest(TestCase):
         call_command("cargar_datos_ejemplo")
         self.assertEqual(Incidente.objects.count(), 5)
         self.assertEqual(User.objects.filter(username="vecino_demo").count(), 1)
+
+
+class IncidenteRateLimitTest(TestCase):
+    def setUp(self):
+        self.usuario = User.objects.create_user(username="reportante", password="Reportante123")
+        self.client.login(username="reportante", password="Reportante123")
+
+    def datos_validos(self, titulo):
+        return {
+            "titulo": titulo,
+            "descripcion": "Descripción con longitud suficiente para pasar validación.",
+            "categoria": Incidente.CATEGORIA_OTRO,
+            "severidad": Incidente.SEVERIDAD_BAJA,
+            "direccion": "Calle Test 1",
+            "latitud": "-34.6",
+            "longitud": "-58.4",
+            "fecha_ocurrencia": "2026-06-19T10:00",
+        }
+
+    def test_segunda_publicacion_inmediata_se_rechaza(self):
+        self.client.post(reverse("incidentes:crear"), self.datos_validos("Primera"))
+        response = self.client.post(reverse("incidentes:crear"), self.datos_validos("Segunda inmediata"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Esperá unos minutos")
+        self.assertFalse(Incidente.objects.filter(titulo="Segunda inmediata").exists())
+
+    def test_publicacion_pasado_el_cooldown_se_permite(self):
+        crear_incidente(self.usuario, titulo="Primera", creado_en=timezone.now() - timedelta(minutes=10))
+        response = self.client.post(reverse("incidentes:crear"), self.datos_validos("Segunda con cooldown pasado"))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Incidente.objects.filter(titulo="Segunda con cooldown pasado").exists())
+
+    def test_limite_diario_se_rechaza(self):
+        ahora = timezone.now()
+        for i in range(5):
+            crear_incidente(self.usuario, titulo=f"Entrada {i}", creado_en=ahora - timedelta(hours=i + 1))
+
+        response = self.client.post(reverse("incidentes:crear"), self.datos_validos("Sexta entrada"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "límite de 5 entradas")
+        self.assertFalse(Incidente.objects.filter(titulo="Sexta entrada").exists())
+
+
+class ReporteIncidenteModelTest(TestCase):
+    def test_str_incluye_reportante_y_titulo(self):
+        autor = User.objects.create_user(username="autor", password="Autor123456")
+        reportante = User.objects.create_user(username="reportante", password="Reportante123")
+        incidente = crear_incidente(autor, titulo="Entrada reportable")
+        reporte = ReporteIncidente.objects.create(incidente=incidente, reportado_por=reportante)
+        self.assertEqual(str(reporte), "Reporte de reportante sobre Entrada reportable")
+
+
+class ReportarIncidenteViewTest(TestCase):
+    def setUp(self):
+        self.autor = User.objects.create_user(username="autor", password="Autor123456")
+        self.incidente = crear_incidente(self.autor, titulo="Entrada bajo reporte")
+        self.reportantes = [
+            User.objects.create_user(username=f"reportante{i}", password="Reportante123")
+            for i in range(UMBRAL_REPORTES_PARA_OCULTAR)
+        ]
+
+    def test_requiere_login(self):
+        url = reverse("incidentes:reportar", kwargs={"pk": self.incidente.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("usuarios:login"), response.url)
+
+    def test_requiere_post(self):
+        self.client.login(username="reportante0", password="Reportante123")
+        url = reverse("incidentes:reportar", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 405)
+
+    def test_autor_no_puede_reportar_su_propia_entrada(self):
+        self.client.login(username="autor", password="Autor123456")
+        url = reverse("incidentes:reportar", kwargs={"pk": self.incidente.pk})
+        self.client.post(url)
+        self.assertEqual(self.incidente.cantidad_reportes(), 0)
+
+    def test_reporte_se_registra_correctamente(self):
+        self.client.login(username="reportante0", password="Reportante123")
+        url = reverse("incidentes:reportar", kwargs={"pk": self.incidente.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.incidente.cantidad_reportes(), 1)
+
+    def test_mismo_usuario_no_puede_reportar_dos_veces(self):
+        self.client.login(username="reportante0", password="Reportante123")
+        url = reverse("incidentes:reportar", kwargs={"pk": self.incidente.pk})
+        self.client.post(url)
+        self.client.post(url)
+        self.assertEqual(self.incidente.cantidad_reportes(), 1)
+
+    def test_se_oculta_automaticamente_al_alcanzar_el_umbral(self):
+        url = reverse("incidentes:reportar", kwargs={"pk": self.incidente.pk})
+        for usuario in self.reportantes:
+            self.client.login(username=usuario.username, password="Reportante123")
+            self.client.post(url)
+
+        self.incidente.refresh_from_db()
+        self.assertTrue(self.incidente.oculto_por_reportes)
+
+
+class IncidenteVisibilidadOcultoTest(TestCase):
+    def setUp(self):
+        self.autor = User.objects.create_user(username="autor", password="Autor123456")
+        self.staff = User.objects.create_user(username="staff", password="StaffSegura123", is_staff=True)
+        self.otro = User.objects.create_user(username="otro", password="OtroSegura123")
+        self.incidente = crear_incidente(self.autor, titulo="Entrada oculta", oculto_por_reportes=True)
+
+    def test_visitante_anonimo_recibe_404(self):
+        url = reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_otro_usuario_logueado_recibe_404(self):
+        self.client.login(username="otro", password="OtroSegura123")
+        url = reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_autor_puede_ver_su_propia_entrada_oculta(self):
+        self.client.login(username="autor", password="Autor123456")
+        url = reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_staff_puede_ver_entrada_oculta(self):
+        self.client.login(username="staff", password="StaffSegura123")
+        url = reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_no_aparece_en_el_listado_publico(self):
+        response = self.client.get(reverse("incidentes:lista"))
+        self.assertNotContains(response, "Entrada oculta")
+
+    def test_boton_reportar_no_aparece_para_el_autor(self):
+        self.incidente.oculto_por_reportes = False
+        self.incidente.save()
+        self.client.login(username="autor", password="Autor123456")
+        url = reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertNotContains(response, "Reportar esta entrada")
+
+    def test_boton_reportar_aparece_para_otro_usuario_logueado(self):
+        self.incidente.oculto_por_reportes = False
+        self.incidente.save()
+        self.client.login(username="otro", password="OtroSegura123")
+        url = reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk})
+        response = self.client.get(url)
+        self.assertContains(response, "Reportar esta entrada")

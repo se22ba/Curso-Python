@@ -16,14 +16,19 @@
             <span class="punto"></span>
             Mapa Vecinal
         </a>
-        <nav class="topbar-nav">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="topbar-nav">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav class="topbar-nav" id="topbar-nav">
             <a href="{% url 'incidentes:lista' %}">Mapa</a>
             <a href="{% url 'paginas:acerca_de' %}">Acerca de</a>
             <a href="{% url 'paginas:contacto' %}">Contacto</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'incidentes:crear' %}" class="btn btn-solido">Nueva entrada</a>
                 <a href="{% url 'usuarios:perfil' user.username %}">{{ user.username }}</a>
-                <form action="{% url 'usuarios:logout' %}" method="post" style="display:inline;">
+                <form action="{% url 'usuarios:logout' %}" method="post" class="form-logout">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-fantasma" style="font-family:inherit;">Salir</button>
                 </form>
@@ -51,5 +56,16 @@
     </footer>
 
     {% block scripts %}{% endblock %}
+
+    <script>
+        const botonMenu = document.getElementById('menu-toggle');
+        const navPrincipal = document.getElementById('topbar-nav');
+
+        botonMenu.addEventListener('click', function () {
+            const abierto = navPrincipal.classList.toggle('abierto');
+            botonMenu.classList.toggle('activo', abierto);
+            botonMenu.setAttribute('aria-expanded', abierto);
+        });
+    </script>
 </body>
 </html>

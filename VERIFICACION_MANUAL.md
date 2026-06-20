@@ -23,11 +23,15 @@ primera carga.
 | Paso | Qué hacer | Qué deberías ver |
 |---|---|---|
 | 1.1 | Ir a `[URL-PUBLICA]/admin/` | Una pantalla de login con los campos "Usuario" y "Contraseña" |
-| 1.2 | Ingresar con el usuario administrador que te compartieron | Un panel con secciones como "Entradas del blog", "Perfiles", "Mensajes de contacto", "Users" y "Groups" |
+| 1.2 | Ingresar con el usuario administrador que te compartieron | Un panel con secciones como "Entradas del blog", "Perfiles", "Mensajes de contacto", "Usuarios" y "Grupos" |
 | 1.3 | Hacer click en "Entradas del blog" | Una tabla con las entradas del blog ya cargadas (título, categoría, severidad, autor) |
 | 1.4 | Hacer click en cualquier entrada de la lista | Un formulario con todos sus datos, editable desde ahí mismo |
+| 1.5 | Volver atrás y hacer click en "Usuarios" (no en "Perfiles") | Una tabla con todas las cuentas registradas: usuario, email, si está activo, fecha de alta y cuántas entradas publicó cada una |
+| 1.6 | Hacer click en cualquier usuario de esa lista | Un formulario con sus datos de cuenta, y más abajo una sección "Perfil" con biografía, barrio y avatar editables desde la misma pantalla |
 
-✅ **Resultado esperado:** se puede entrar al panel y ver/gestionar el contenido sin errores.
+✅ **Resultado esperado:** se puede entrar al panel, gestionar el contenido del blog, y ver/gestionar todos los usuarios registrados (no solo las entradas) sin errores.
+
+> **Aclaración**: la página `/usuarios/perfil/<usuario>/` que ves dentro del sitio público (con el botón "Editar mi perfil") es la página de perfil de **ese usuario en particular**, no el panel de administración. El panel de administración real está siempre en `/admin/`.
 
 ---
 
@@ -92,6 +96,25 @@ primera carga.
 | 6.1 | Abrir `[URL-PUBLICA]` desde el navegador de una computadora distinta a la del desarrollador, o desde el celular, sin estar conectado a la misma red | El sitio carga igual, confirmando que es accesible desde internet y no solo en red local |
 
 ✅ **Resultado esperado:** el proyecto es accesible públicamente, no solo en `localhost`.
+
+---
+
+## 7. Moderación y protección contra spam (funcionalidad extra)
+
+Estos pasos requieren dos cuentas distintas. Podés usar `vecino_demo`
+(ver paso 3.2 para crear la tuya) y una cuenta nueva que crees vos.
+
+| Paso | Qué hacer | Qué deberías ver |
+|---|---|---|
+| 7.1 | Logueado con cualquier cuenta, publicá una entrada nueva en `[URL-PUBLICA]/incidentes/nuevo/` | La entrada se publica con éxito y te redirige a su detalle |
+| 7.2 | Inmediatamente después, intentá publicar otra entrada nueva | El formulario rechaza la publicación con un mensaje indicando que debés esperar unos minutos |
+| 7.3 | Entrá al detalle de una entrada que **no** sea tuya, estando logueado | Aparece un botón "Reportar esta entrada" |
+| 7.4 | Hacé click en ese botón | Aparece un mensaje de confirmación ("Gracias, tu reporte fue registrado") y el botón desaparece, reemplazado por un texto que indica que ya la reportaste |
+| 7.5 | Con dos cuentas más, reportá esa misma entrada (en total 3 reportes de usuarios distintos) | Al tercer reporte, la entrada deja de aparecer en el mapa y el listado público |
+| 7.6 | Iniciá sesión con la cuenta que publicó esa entrada y volvé a su detalle (vas a necesitar el link directo) | El autor sigue pudiendo ver su propia entrada, aunque ya no aparezca en el listado |
+| 7.7 | Desde un navegador sin iniciar sesión, intentá abrir el link directo de esa misma entrada oculta | El sitio muestra una página de "no encontrado" (404) |
+
+✅ **Resultado esperado:** un usuario no puede saturar el blog con publicaciones seguidas, y la comunidad puede ocultar colaborativamente una entrada sospechosa sin que un admin tenga que intervenir manualmente en cada caso.
 
 ---
 

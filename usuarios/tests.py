@@ -6,6 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
+from incidentes.models import Incidente
 from .models import Perfil
 
 
@@ -216,3 +217,34 @@ class CrearSuperusuarioInicialCommandTest(TestCase):
         self.assertEqual(User.objects.filter(username="admin").count(), 1)
         usuario = User.objects.get(username="admin")
         self.assertTrue(usuario.check_password("PrimeraPassword123"))
+
+
+class UsuarioAdminTest(TestCase):
+    def setUp(self):
+        self.superusuario = User.objects.create_superuser(
+            username="superadmin", email="superadmin@example.com", password="SuperAdmin123"
+        )
+        self.client.login(username="superadmin", password="SuperAdmin123")
+
+    def test_listado_de_usuarios_muestra_cantidad_de_entradas(self):
+        autor = User.objects.create_user(username="autor_demo", password="AutorDemo123")
+        Incidente.objects.create(
+            titulo="Entrada de prueba",
+            descripcion="x" * 20,
+            categoria="otro",
+            severidad="baja",
+            direccion="Calle Test",
+            latitud="-34.6",
+            longitud="-58.4",
+            fecha_ocurrencia="2026-06-19T10:00",
+            autor=autor,
+        )
+        response = self.client.get(reverse("admin:auth_user_changelist"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "autor_demo")
+
+    def test_edicion_de_usuario_incluye_inline_de_perfil(self):
+        usuario = User.objects.create_user(username="con_perfil", password="ConPerfil123")
+        response = self.client.get(reverse("admin:auth_user_change", args=[usuario.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "barrio")

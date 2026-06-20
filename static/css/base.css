@@ -1,3 +1,4 @@
+
 :root {
     --bg: #0e0f12;
     --panel: #16181d;
@@ -11,11 +12,11 @@
     --severidad-media: #d9a53d;
     --severidad-alta: #c84b31;
 }
-
+ 
 * {
     box-sizing: border-box;
 }
-
+ 
 body {
     margin: 0;
     background: var(--bg);
@@ -23,7 +24,7 @@ body {
     font-family: 'Inter', -apple-system, sans-serif;
     line-height: 1.5;
 }
-
+ 
 h1, h2, h3, h4 {
     font-family: 'Oswald', sans-serif;
     text-transform: uppercase;
@@ -31,21 +32,25 @@ h1, h2, h3, h4 {
     font-weight: 600;
     margin: 0 0 0.5rem;
 }
-
+ 
+h1 { font-size: clamp(1.5rem, 5vw, 2.25rem); }
+h2 { font-size: clamp(1.25rem, 4vw, 1.75rem); }
+h3 { font-size: clamp(1.1rem, 3.5vw, 1.4rem); }
+ 
 .mono {
     font-family: 'JetBrains Mono', monospace;
 }
-
+ 
 a {
     color: var(--acento);
     text-decoration: none;
 }
-
+ 
 a:hover {
     color: var(--acento-fuerte);
     text-decoration: underline;
 }
-
+ 
 .topbar {
     display: flex;
     align-items: center;
@@ -57,7 +62,7 @@ a:hover {
     top: 0;
     z-index: 50;
 }
-
+ 
 .topbar-marca {
     display: flex;
     align-items: center;
@@ -68,7 +73,7 @@ a:hover {
     text-transform: uppercase;
     color: var(--text);
 }
-
+ 
 .topbar-marca .punto {
     width: 10px;
     height: 10px;
@@ -76,23 +81,58 @@ a:hover {
     background: var(--acento);
     box-shadow: 0 0 8px var(--acento);
 }
-
+ 
 .topbar-nav {
     display: flex;
     gap: 1.3rem;
     align-items: center;
     font-size: 0.9rem;
 }
-
+ 
 .topbar-nav a {
     color: var(--text-dim);
 }
-
+ 
 .topbar-nav a:hover {
     color: var(--text);
     text-decoration: none;
 }
-
+ 
+.menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+ 
+.menu-toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+ 
+.menu-toggle.activo span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+ 
+.menu-toggle.activo span:nth-child(2) {
+    opacity: 0;
+}
+ 
+.menu-toggle.activo span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+ 
 .btn {
     display: inline-block;
     padding: 0.5rem 1.1rem;
@@ -108,55 +148,55 @@ a:hover {
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
 }
-
+ 
 .btn:hover {
     background: var(--acento);
     color: #16181d;
     text-decoration: none;
 }
-
+ 
 .btn-solido {
     background: var(--acento);
     color: #16181d;
 }
-
+ 
 .btn-solido:hover {
     background: var(--acento-fuerte);
 }
-
+ 
 .btn-peligro {
     border-color: var(--severidad-alta);
     color: var(--severidad-alta);
 }
-
+ 
 .btn-peligro:hover {
     background: var(--severidad-alta);
     color: var(--text);
 }
-
+ 
 .btn-fantasma {
     border-color: var(--line);
     color: var(--text-dim);
 }
-
+ 
 .btn-fantasma:hover {
     background: var(--panel-raised);
     color: var(--text);
 }
-
+ 
 .contenedor {
     max-width: 1180px;
     margin: 0 auto;
     padding: 0 1.5rem;
 }
-
+ 
 .panel {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 3px;
     padding: 1.5rem;
 }
-
+ 
 .alerta-exito {
     background: rgba(91, 140, 90, 0.15);
     border: 1px solid var(--severidad-baja);
@@ -166,7 +206,7 @@ a:hover {
     margin-bottom: 1rem;
     font-size: 0.92rem;
 }
-
+ 
 .alerta-error {
     background: rgba(200, 75, 49, 0.15);
     border: 1px solid var(--severidad-alta);
@@ -176,24 +216,24 @@ a:hover {
     margin-bottom: 1rem;
     font-size: 0.92rem;
 }
-
+ 
 .severidad-baja { color: var(--severidad-baja); }
 .severidad-media { color: var(--severidad-media); }
 .severidad-alta { color: var(--severidad-alta); }
-
+ 
 .barra-severidad {
     width: 4px;
     border-radius: 0;
 }
-
+ 
 .barra-severidad.baja { background: var(--severidad-baja); }
 .barra-severidad.media { background: var(--severidad-media); }
 .barra-severidad.alta { background: var(--severidad-alta); }
-
+ 
 form p {
     margin: 0 0 1rem;
 }
-
+ 
 label {
     display: block;
     font-size: 0.82rem;
@@ -202,7 +242,7 @@ label {
     letter-spacing: 0.03em;
     margin-bottom: 0.3rem;
 }
-
+ 
 input, select, textarea {
     width: 100%;
     max-width: 480px;
@@ -214,12 +254,12 @@ input, select, textarea {
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
 }
-
+ 
 input:focus, select:focus, textarea:focus {
     outline: 2px solid var(--acento);
     outline-offset: 1px;
 }
-
+ 
 .errorlist {
     list-style: none;
     padding: 0;
@@ -227,7 +267,7 @@ input:focus, select:focus, textarea:focus {
     color: var(--severidad-alta);
     font-size: 0.85rem;
 }
-
+ 
 footer {
     margin-top: 4rem;
     padding: 2rem 1.5rem;
@@ -236,3 +276,70 @@ footer {
     font-size: 0.85rem;
     text-align: center;
 }
+ 
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0.8rem 1rem;
+    }
+ 
+    .topbar-marca {
+        font-size: 1rem;
+    }
+ 
+    .menu-toggle {
+        display: flex;
+    }
+ 
+    .topbar-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        padding: 0.5rem 1rem 1rem;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+ 
+    .topbar-nav.abierto {
+        display: flex;
+    }
+ 
+    .topbar-nav a,
+    .topbar-nav .form-logout,
+    .topbar-nav .form-logout button {
+        width: 100%;
+        text-align: left;
+    }
+ 
+    .topbar-nav a {
+        padding: 0.7rem 0;
+        border-bottom: 1px solid var(--line);
+    }
+ 
+    .topbar-nav .btn {
+        margin: 0.5rem 0;
+        text-align: center;
+    }
+ 
+    .topbar-nav .form-logout {
+        border-bottom: 1px solid var(--line);
+    }
+ 
+    .topbar-nav .form-logout button {
+        padding: 0.7rem 0;
+    }
+ 
+    .contenedor {
+        padding: 0 1rem;
+    }
+ 
+    .panel {
+        padding: 1.1rem;
+    }
+}
+ 

@@ -2,7 +2,7 @@
 {% block title %}Mapa de incidentes{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
     #mapa { height: 480px; width: 100%; border-radius: 3px; border: 1px solid var(--line); }
     .layout-mapa { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
@@ -20,6 +20,15 @@
     .leaflet-popup-tip { background: var(--panel-raised); }
     .popup-incidente h4 { margin: 0 0 0.3rem; font-size: 0.9rem; }
     .popup-incidente a { color: var(--acento); }
+
+    @media (max-width: 768px) {
+        #mapa { height: 280px; }
+        .lista-incidentes { max-height: none; }
+        .panel-filtros { flex-direction: column; align-items: stretch; }
+        .panel-filtros > div { min-width: 0; width: 100%; }
+        .panel-filtros > div:last-child { display: flex; gap: 0.6rem; }
+        .panel-filtros > div:last-child .btn { flex: 1; }
+    }
 </style>
 {% endblock %}
 
@@ -81,43 +90,48 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const datosIncidentes = {{ incidentes_json|safe }};
+    if (typeof L === "undefined") {
+        document.getElementById("mapa").innerHTML =
+            '<p style="color:var(--text-dim); padding:1rem; text-align:center;">No se pudo cargar el mapa. Verificá tu conexión a internet.</p>';
+    } else {
+        const datosIncidentes = {{ incidentes_json|safe }};
 
-    const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
+        const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
 
-    const centroDefault = [-34.6037, -58.3816];
-    const mapa = L.map('mapa').setView(centroDefault, 12);
+        const centroDefault = [-34.6037, -58.3816];
+        const mapa = L.map('mapa').setView(centroDefault, 12);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
-    }).addTo(mapa);
-
-    const marcadores = [];
-
-    datosIncidentes.forEach(function (incidente) {
-        const marcador = L.circleMarker([incidente.lat, incidente.lng], {
-            radius: 8,
-            color: coloresSeveridad[incidente.severidad] || "#d9a53d",
-            fillColor: coloresSeveridad[incidente.severidad] || "#d9a53d",
-            fillOpacity: 0.85,
-            weight: 2,
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19,
         }).addTo(mapa);
 
-        marcador.bindPopup(
-            '<div class="popup-incidente"><h4>' + incidente.titulo + '</h4>' +
-            '<div>' + incidente.categoria + ' · ' + incidente.direccion + '</div>' +
-            '<a href="' + incidente.url + '">Ver detalle &rarr;</a></div>'
-        );
+        const marcadores = [];
 
-        marcadores.push(marcador);
-    });
+        datosIncidentes.forEach(function (incidente) {
+            const marcador = L.circleMarker([incidente.lat, incidente.lng], {
+                radius: 8,
+                color: coloresSeveridad[incidente.severidad] || "#d9a53d",
+                fillColor: coloresSeveridad[incidente.severidad] || "#d9a53d",
+                fillOpacity: 0.85,
+                weight: 2,
+            }).addTo(mapa);
 
-    if (marcadores.length > 0) {
-        const grupo = L.featureGroup(marcadores);
-        mapa.fitBounds(grupo.getBounds(), { padding: [30, 30], maxZoom: 15 });
+            marcador.bindPopup(
+                '<div class="popup-incidente"><h4>' + incidente.titulo + '</h4>' +
+                '<div>' + incidente.categoria + ' · ' + incidente.direccion + '</div>' +
+                '<a href="' + incidente.url + '">Ver detalle &rarr;</a></div>'
+            );
+
+            marcadores.push(marcador);
+        });
+
+        if (marcadores.length > 0) {
+            const grupo = L.featureGroup(marcadores);
+            mapa.fitBounds(grupo.getBounds(), { padding: [30, 30], maxZoom: 15 });
+        }
     }
 </script>
 {% endblock %}
