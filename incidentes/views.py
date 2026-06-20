@@ -84,6 +84,9 @@ class IncidenteDetailView(DetailView):
         usuario = self.request.user
         incidente = self.object
 
+        context["lat_json"] = json.dumps(float(incidente.latitud))
+        context["lng_json"] = json.dumps(float(incidente.longitud))
+
         puede_reportar = usuario.is_authenticated and usuario.id != incidente.autor_id
         context["puede_reportar"] = puede_reportar
         context["ya_reportado"] = puede_reportar and ReporteIncidente.objects.filter(
