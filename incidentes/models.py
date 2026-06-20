@@ -42,6 +42,8 @@ class Incidente(models.Model):
 
     class Meta:
         ordering = ["-fecha_ocurrencia"]
+        verbose_name = "Entrada del blog"
+        verbose_name_plural = "Entradas del blog"
 
     def __str__(self):
         return f"{self.get_categoria_display()} - {self.titulo}"

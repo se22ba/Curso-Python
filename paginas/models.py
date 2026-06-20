@@ -11,6 +11,8 @@ class MensajeContacto(models.Model):
 
     class Meta:
         ordering = ["-creado_en"]
+        verbose_name = "Mensaje de contacto"
+        verbose_name_plural = "Mensajes de contacto"
 
     def __str__(self):
         return f"{self.asunto} ({self.nombre})"

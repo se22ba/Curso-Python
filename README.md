@@ -4,6 +4,11 @@ Blog comunitario donde cada entrada es un reporte de un incidente de
 seguridad (robo, hurto, vandalismo, actividad sospechosa) geolocalizado
 en un mapa interactivo. Proyecto final del curso de Django.
 
+> **¿Solo necesitás verificar que el proyecto funciona, sin instalar
+> nada?** Ver [`VERIFICACION_MANUAL.md`](./VERIFICACION_MANUAL.md):
+> una guía paso a paso pensada para perfiles no técnicos, que solo
+> requiere un navegador y la URL pública del proyecto.
+
 ## Funcionalidades
 
 - **Panel de administración**: gestión de entradas del blog, perfiles
@@ -52,6 +57,7 @@ mapa_delito/
 ├── build.sh                  # script de build para Render
 ├── Procfile                   # comando de arranque para Render/Heroku-like
 ├── render.yaml                 # Blueprint de Render (deploy con un click)
+├── VERIFICACION_MANUAL.md       # guía de pruebas para perfiles no técnicos
 ├── .env.example
 └── .gitignore
 ```
@@ -298,6 +304,19 @@ Si preferís configurar el servicio a mano en lugar de usar
 - **WhiteNoise para archivos estáticos**: evita depender de un
   servicio externo (S3, CDN propio) para servir CSS en producción;
   suficiente para el alcance de este proyecto.
+- **`verbose_name`/`verbose_name_plural` explícitos en cada modelo**:
+  sin esto, Django pluraliza agregando una simple "s" al nombre de la
+  clase, lo que en español da resultados incorrectos como "Perfils"
+  o "Mensaje contactos". Definirlos a mano asegura que el panel de
+  administración se lea correctamente ("Perfiles", "Mensajes de
+  contacto", "Entradas del blog").
+- **Guía de verificación manual separada del README técnico**: el
+  README está pensado para quien va a instalar y ejecutar el proyecto
+  (requiere terminal, Python, variables de entorno); `VERIFICACION_MANUAL.md`
+  está pensado para quien solo necesita confirmar que el proyecto
+  desplegado funciona, usando únicamente un navegador. Mezclar ambos
+  públicos en un solo documento hace que cualquiera de los dos tenga
+  que saltarse información que no le sirve.
 
 ## Reproducir en otra máquina
 

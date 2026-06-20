@@ -13,6 +13,10 @@ class Perfil(models.Model):
     def __str__(self):
         return f"Perfil de {self.usuario.username}"
 
+    class Meta:
+        verbose_name = "Perfil"
+        verbose_name_plural = "Perfiles"
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def crear_perfil_automaticamente(sender, instance, created, **kwargs):
