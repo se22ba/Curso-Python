@@ -75,8 +75,8 @@
         document.getElementById("mapa-detalle").innerHTML =
             '<p style="color:var(--text-dim); padding:1rem; text-align:center;">No se pudo cargar el mapa. Verificá tu conexión a internet.</p>';
     } else {
-        const lat = {{ incidente.latitud }};
-        const lng = {{ incidente.longitud }};
+        const lat = {{ lat_json|safe }};
+        const lng = {{ lng_json|safe }};
         const coloresSeveridad = { baja: "#5b8c5a", media: "#d9a53d", alta: "#c84b31" };
 
         const mapaDetalle = L.map('mapa-detalle').setView([lat, lng], 16);

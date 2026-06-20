@@ -6,6 +6,9 @@
 <style>
     #mapa-seleccion { height: 360px; width: 100%; border-radius: 3px; border: 1px solid var(--line); margin-bottom: 1rem; }
     .ayuda-mapa { font-size: 0.85rem; color: var(--text-dim); margin-top: -0.5rem; margin-bottom: 1rem; }
+    .acciones-mapa { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+    .acciones-mapa .btn { font-size: 0.75rem; padding: 0.4rem 0.8rem; }
+    .acciones-mapa .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     @media (max-width: 768px) {
         #mapa-seleccion { height: 260px; }
@@ -18,6 +21,10 @@
     <h1 style="margin-top:1.5rem;">{% if object %}Editar entrada{% else %}Nueva entrada del blog{% endif %}</h1>
 
     <div id="mapa-seleccion"></div>
+    <div class="acciones-mapa">
+        <button type="button" class="btn btn-fantasma" id="btn-mi-ubicacion">Usar mi ubicación</button>
+        <button type="button" class="btn btn-fantasma" id="btn-buscar-direccion">Buscar dirección en el mapa</button>
+    </div>
     <p class="ayuda-mapa">Hacé click en el mapa para fijar la ubicación exacta del incidente que estás reportando.</p>
 
     <form method="post" class="panel">
@@ -55,18 +62,81 @@
             marcadorSeleccion = L.marker([latInicial, lngInicial]).addTo(mapaSeleccion);
         }
 
-        mapaSeleccion.on('click', function (evento) {
-            const lat = evento.latlng.lat.toFixed(6);
-            const lng = evento.latlng.lng.toFixed(6);
-
-            inputLat.value = lat;
-            inputLng.value = lng;
+        function fijarUbicacion(lat, lng) {
+            inputLat.value = lat.toFixed(6);
+            inputLng.value = lng.toFixed(6);
 
             if (marcadorSeleccion) {
-                marcadorSeleccion.setLatLng(evento.latlng);
+                marcadorSeleccion.setLatLng([lat, lng]);
             } else {
-                marcadorSeleccion = L.marker(evento.latlng).addTo(mapaSeleccion);
+                marcadorSeleccion = L.marker([lat, lng]).addTo(mapaSeleccion);
             }
+        }
+
+        mapaSeleccion.on('click', function (evento) {
+            fijarUbicacion(evento.latlng.lat, evento.latlng.lng);
+        });
+
+        const botonUbicacion = document.getElementById('btn-mi-ubicacion');
+        botonUbicacion.addEventListener('click', function () {
+            if (!navigator.geolocation) {
+                alert('Tu navegador no permite acceder a la ubicación.');
+                return;
+            }
+
+            botonUbicacion.disabled = true;
+            botonUbicacion.textContent = 'Buscando tu ubicación...';
+
+            navigator.geolocation.getCurrentPosition(
+                function (posicion) {
+                    const lat = posicion.coords.latitude;
+                    const lng = posicion.coords.longitude;
+                    fijarUbicacion(lat, lng);
+                    mapaSeleccion.setView([lat, lng], 16);
+                    botonUbicacion.disabled = false;
+                    botonUbicacion.textContent = 'Usar mi ubicación';
+                },
+                function () {
+                    alert('No se pudo obtener tu ubicación. Verificá los permisos de geolocalización del navegador.');
+                    botonUbicacion.disabled = false;
+                    botonUbicacion.textContent = 'Usar mi ubicación';
+                },
+                { timeout: 10000 }
+            );
+        });
+
+        const botonDireccion = document.getElementById('btn-buscar-direccion');
+        botonDireccion.addEventListener('click', function () {
+            const direccion = document.getElementById('id_direccion').value.trim();
+
+            if (!direccion) {
+                alert('Escribí una dirección en el campo "Dirección" antes de buscarla en el mapa.');
+                return;
+            }
+
+            botonDireccion.disabled = true;
+            botonDireccion.textContent = 'Buscando...';
+
+            fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(direccion))
+                .then(function (respuesta) { return respuesta.json(); })
+                .then(function (resultados) {
+                    if (!resultados.length) {
+                        alert('No se encontró esa dirección. Probá ser más específico o hacé click directamente en el mapa.');
+                        return;
+                    }
+
+                    const lat = parseFloat(resultados[0].lat);
+                    const lng = parseFloat(resultados[0].lon);
+                    fijarUbicacion(lat, lng);
+                    mapaSeleccion.setView([lat, lng], 16);
+                })
+                .catch(function () {
+                    alert('No se pudo buscar la dirección en este momento. Probá hacer click directamente en el mapa.');
+                })
+                .finally(function () {
+                    botonDireccion.disabled = false;
+                    botonDireccion.textContent = 'Buscar dirección en el mapa';
+                });
         });
     }
 </script>

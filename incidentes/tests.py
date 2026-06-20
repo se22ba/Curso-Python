@@ -144,6 +144,13 @@ class IncidenteDetailViewTest(TestCase):
         response = self.client.get(reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk}))
         self.assertNotContains(response, "Eliminar")
 
+    def test_coordenadas_del_mapa_no_quedan_localizadas_con_coma(self):
+        response = self.client.get(reverse("incidentes:detalle", kwargs={"pk": self.incidente.pk}))
+        html = response.content.decode()
+        self.assertIn("const lat = -34.6037;", html)
+        self.assertIn("const lng = -58.3816;", html)
+        self.assertNotIn("const lat = -34,6037", html)
+
 
 class IncidenteCreateViewTest(TestCase):
     def setUp(self):
