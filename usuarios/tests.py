@@ -138,6 +138,17 @@ class PerfilDetailViewTest(TestCase):
         response = self.client.get(reverse("usuarios:perfil", kwargs={"username": "ana"}))
         self.assertNotContains(response, "Editar mi perfil")
 
+    def test_perfil_muestra_boton_gestionar_usuarios_a_staff(self):
+        staff = User.objects.create_user(username="staff_user", password="StaffSegura123", is_staff=True)
+        self.client.login(username="staff_user", password="StaffSegura123")
+        response = self.client.get(reverse("usuarios:perfil", kwargs={"username": "staff_user"}))
+        self.assertContains(response, "Gestionar usuarios")
+
+    def test_perfil_no_muestra_boton_gestionar_usuarios_a_no_staff(self):
+        self.client.login(username="ana", password="AnaSegura123")
+        response = self.client.get(reverse("usuarios:perfil", kwargs={"username": "ana"}))
+        self.assertNotContains(response, "Gestionar usuarios")
+
 
 class EditarPerfilViewTest(TestCase):
     def setUp(self):
