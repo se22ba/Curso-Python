@@ -240,12 +240,42 @@ El proyecto incluye `render.yaml`, así que se puede desplegar como
    `collectstatic` y `migrate` según `build.sh`).
 7. Una vez desplegado, Render entrega una URL pública del estilo
    `https://mapa-vecinal.onrender.com`.
-8. Crear el superusuario en producción desde la consola de Render
-   (**Shell** en el dashboard del servicio):
-   ```bash
-   python manage.py createsuperuser
-   python manage.py cargar_datos_ejemplo
-   ```
+8. El superusuario y los datos de ejemplo se crean automáticamente en
+   el propio build (ver siguiente sección): no es necesario usar la
+   **Shell** de Render, que solo está disponible en planes pagos.
+
+### Crear el superusuario sin usar Shell (plan gratuito)
+
+El acceso a Shell en Render requiere un plan pago. En el plan
+gratuito, `build.sh` corre `python manage.py crear_superusuario_inicial`
+en cada deploy, que lee estas variables de entorno y crea el
+superusuario solo si todavía no existe (no duplica ni cambia la
+contraseña si ya está creado):
+
+1. En el dashboard de Render, abrí tu Web Service → pestaña
+   **Environment**.
+2. Agregá estas variables:
+
+   | Key | Value |
+   |---|---|
+   | `DJANGO_SUPERUSER_USERNAME` | el usuario que quieras |
+   | `DJANGO_SUPERUSER_EMAIL` | un email cualquiera |
+   | `DJANGO_SUPERUSER_PASSWORD` | una contraseña segura |
+   | `CARGAR_DATOS_EJEMPLO` | `True` (opcional, carga las 5 entradas de ejemplo) |
+
+3. Guardá. Render redeploya automáticamente al guardar variables de
+   entorno; si no lo hace solo, forzalo con **Manual Deploy → Deploy
+   latest commit**.
+4. Revisá los **Logs** del deploy: deberías ver la línea
+   `Superusuario '<tu usuario>' creado correctamente.`
+5. Iniciá sesión en `[tu-url]/admin/` con esas credenciales.
+
+Si en el futuro necesitás cambiar la contraseña de ese superusuario,
+no alcanza con cambiar la variable de entorno (el comando es
+idempotente a propósito y no la va a sobreescribir). Usá en su lugar
+`python manage.py changepassword <usuario>` desde una Shell si tenés
+plan pago, o borrá el usuario desde `/admin/` con otra cuenta de
+superusuario y dejá que el build lo recree con la nueva contraseña.
 
 ### Notas sobre el plan gratuito de Render
 
@@ -270,6 +300,9 @@ Si preferís configurar el servicio a mano en lugar de usar
    - `ALLOWED_HOSTS`: `.onrender.com`
    - `DATABASE_URL`: si creás una base Postgres en Render, copiar su
      "Internal Connection String" acá.
+   - `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`,
+     `DJANGO_SUPERUSER_PASSWORD`: para que el build cree el
+     superusuario automáticamente (ver sección anterior).
 
 ## Decisiones de diseño
 
@@ -317,6 +350,12 @@ Si preferís configurar el servicio a mano en lugar de usar
   desplegado funciona, usando únicamente un navegador. Mezclar ambos
   públicos en un solo documento hace que cualquiera de los dos tenga
   que saltarse información que no le sirve.
+- **Creación del superusuario vía variables de entorno en el build**,
+  no vía Shell: el acceso a Shell en Render requiere un plan pago, así
+  que `crear_superusuario_inicial` lee credenciales desde el entorno
+  y crea el usuario en cada deploy si todavía no existe. Esto además
+  hace que el proyecto se recupere solo si la base gratuita de
+  Postgres llegara a reiniciarse, sin pasos manuales adicionales.
 
 ## Reproducir en otra máquina
 

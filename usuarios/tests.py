@@ -1,4 +1,8 @@
+import os
+from unittest import mock
+
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
@@ -175,3 +179,40 @@ class EditarPerfilViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.usuario.refresh_from_db()
         self.assertEqual(self.usuario.perfil.barrio, "")
+
+
+class CrearSuperusuarioInicialCommandTest(TestCase):
+    def test_sin_variables_no_crea_usuario(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            call_command("crear_superusuario_inicial")
+        self.assertEqual(User.objects.filter(is_superuser=True).count(), 0)
+
+    def test_con_variables_crea_superusuario(self):
+        variables = {
+            "DJANGO_SUPERUSER_USERNAME": "admin",
+            "DJANGO_SUPERUSER_EMAIL": "admin@example.com",
+            "DJANGO_SUPERUSER_PASSWORD": "AdminSegura123",
+        }
+        with mock.patch.dict(os.environ, variables):
+            call_command("crear_superusuario_inicial")
+
+        usuario = User.objects.get(username="admin")
+        self.assertTrue(usuario.is_superuser)
+        self.assertTrue(usuario.check_password("AdminSegura123"))
+
+    def test_comando_es_idempotente(self):
+        variables = {
+            "DJANGO_SUPERUSER_USERNAME": "admin",
+            "DJANGO_SUPERUSER_EMAIL": "admin@example.com",
+            "DJANGO_SUPERUSER_PASSWORD": "PrimeraPassword123",
+        }
+        with mock.patch.dict(os.environ, variables):
+            call_command("crear_superusuario_inicial")
+
+        variables["DJANGO_SUPERUSER_PASSWORD"] = "SegundaPassword456"
+        with mock.patch.dict(os.environ, variables):
+            call_command("crear_superusuario_inicial")
+
+        self.assertEqual(User.objects.filter(username="admin").count(), 1)
+        usuario = User.objects.get(username="admin")
+        self.assertTrue(usuario.check_password("PrimeraPassword123"))

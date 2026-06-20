@@ -20,3 +20,11 @@ services:
         fromDatabase:
           name: mapa-vecinal-db
           property: connectionString
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      - key: CARGAR_DATOS_EJEMPLO
+        value: "True"
